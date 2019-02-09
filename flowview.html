@@ -14,12 +14,35 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap3-dialog/1.34.9/css/bootstrap-dialog.min.css" rel="stylesheet" type="text/css" />
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
   <style>
+    body {
+      background-image: linear-gradient(#187596, #029680);
+      font-family: Roboto,Helvetica,sans-serif;
+    }
+
+    h1 {
+      color: white;
+    }
+
+    .panel-heading {
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+    }
+
+    .panel {
+      background-color: rgba(255, 255, 255, 0.2);
+      border: none;
+      border-radius: 12px;
+    }
+
     .well {
       margin-bottom: 5px;
+      background-color: white;
+      border: none;
+      border-radius: 6px;
     }
     .col-sm-5, .col-sm-2 {
-      padding-right: 5px;
-      padding-left: 5px;
+      padding-right: 10px;
+      padding-left: 10px;
     }
 
     .node-folders {
@@ -52,12 +75,29 @@
       width: 13px;
       vertical-align: text-top;
     }
+
+    .label-string {
+      background-color: rgb(117,213,0);
+    }
+
+    .label-number {
+      background-color: rgb(2,170,214);
+    }
+
+    .label-boolean {
+      background-color: rgb(213,103,0);
+    }
   </style>
 </head>
 <body>
   <div id="wrapper" class="toggled">
     <div id="sidebar-wrapper">
-      <h3 style="color: white">&nbsp;&nbsp;Folders</h3>
+        <br />
+        <h3 style="color: white">&nbsp;Folders&nbsp;&nbsp;&nbsp;
+          <button class="btn btn-default" data="add_btn" data-toggle="tooltip" title="" onclick="addFolder()" data-original-title="Add folder"><i class="fa fa-plus"></i></button>
+          <button class="btn btn-default" data="edit_btn" data-toggle="tooltip" title="" onclick="editFolder()" data-original-title="Edit folder"><i class="fa fa-pencil"></i></button>
+          <!--button class="btn btn-default" data="delete_btn" data-toggle="tooltip" title="" onclick="deleteFolder()" data-original-title="Delete folder"><i class="fa fa-remove"></i></button-->
+      </h3>
       <div id="folders">
         Showing <span class="label label-info">0</span> flows in <span class="label label-info">0</span> folders</h1>
       </div>
@@ -117,32 +157,32 @@
               <div class="panel-body">
                 <div class="row">
                   <div class="col-sm-12 small text-center">
-                    <div class="text-muted">Triggered <span data="triggercount"></span> times.</div>
+                    <div>Triggered <span data="triggercount"></span> times.</div>
                   </div>
                 </div>
                 <div class="row">
                   <div class="col-sm-2 small">
                     <span data="cards_trigger">
-                      <div class="text-muted">When</div>
+                      <div>When</div>
                     </span>
                   </div>
                   <div class="col-sm-5 small" data="cards_condition">
                     <span data="cards_condition_group1">
-                      <div class="text-muted">And</div>
+                      <div>And</div>
                     </span>
                     <span data="cards_condition_group2">
-                      <div class="text-muted">Or</div>
+                      <div>Or</div>
                     </span>
                     <span data="cards_condition_group3">
-                      <div class="text-muted">Or</div>
+                      <div>Or</div>
                     </span>
                   </div>
                   <div class="col-sm-5 small" data="cards_action">
                     <span data="cards_action_then">
-                      <div class="text-muted">Then</div>
+                      <div>Then</div>
                     </span>
                     <span data="cards_action_else">
-                      <div class="text-muted">Else</div>
+                      <div>Else</div>
                     </span>
                   </div>
                 </div>
@@ -187,6 +227,30 @@
             </select>
           </div>
 
+          <div class="dialog_addFolder">
+            <label for="addName" >Name</label>
+            <input id="addFolder" class="form-control" type="text" value="">
+            <label for="editFolder">In folder</label>
+            <select id="editFolder" class="form-control">
+              <option value="false">None</option>
+            </select>
+          </div>
+
+          <div class="dialog_selectFolder">
+            <label for="editFolder">Folder</label>
+            <select id="editFolder" class="form-control">
+              </select>
+            </div>
+
+            <div class="dialog_editFolder">
+              <label for="editName" >Name</label>
+              <input id="editName" class="form-control" type="text" value="">
+              <label for="editFolder">In folder</label>
+              <select id="editFolder" class="form-control">
+                <option value="false">None</option>
+            </select>
+          </div>
+
           <div class="dialog_test form-group">
             <span class="text-muted" data="Progress:"></span>
             <span class="text-muted" data="test_status">initializing...</span>
@@ -211,7 +275,7 @@
     </div>
     <footer class="footer">
       <div class="container">
-        <p class="text-muted">flows: <span id=flow_count>loading...</span></p>
+        <p>flows: <span id=flow_count>loading...</span></p>
       </div>
     </footer>
   </div>
@@ -244,7 +308,7 @@
   function addToken (token) {
     var newToken = $('.template_token').clone()
     $(newToken).find('[data=token_uri]').html(token.uriObj.name)
-    $(newToken).find('[data=token_title]').html(token.title)
+    $(newToken).find('[data=token_title]').html(formatToken(token))
     $(newToken).find('[data=token_type]').html(token.type)
     $(newToken).find('[data=token_value]').html(token.value)
     $('#tokens').append(newToken.html())
@@ -322,20 +386,20 @@
     } else {
       $(newCard).find('[data=card_title]').html(definitions.title)
     }
-
     $(newCard).find('[data=card_type_' + app.uriObj.type + ']').html(app.uriObj.name)
-    if (card.args) $(newCard).find('[data=card_args]').html(formatArgs(card, definitions))
+    if (app.uriObj.color) $(newCard).find('[data=card_type_' + app.uriObj.type + ']').css('background-color',app.uriObj.color)
+    if (card.args) $(newCard).find('[data=card_args]').html(formatArgs(card, definitions, flowId))
     // if (!isEmptyObject(card.args)) $(newCard).find('[data=card_args]').html(formatArgs(card, definitions))
-    if (card.delay && card.delay.number !== '0') $(newCard).find('[data=card_delay]').html('<i>delay</i>: ' + card.delay.number + (card.delay.multiplier === '60' ? ' minute' : ' second') + (card.delay.number !== '1' ? 's' : ''))
-    if (card.droptoken) $(newCard).find('[data=card_droptoken]').html('<i>token</i>: <code>' + (card.droptoken) + '</code>')
+    if (card.delay && card.delay.number !== '0') $(newCard).find('[data=card_delay]').html('<i>delay</i>: ' + card.delay.number + (card.delay.multiplier === 60 ? ' minute' : ' second') + (card.delay.number !== '1' ? 's' : ''))
+    if (card.droptoken) $(newCard).find('[data=card_droptoken]').html('<i>token</i>: ' + formatToken({title: card.droptoken}, flowId))
     if (definitions.tokens) {
-      var tokens = '<i>tokens</i>: '
+      var tokens = '<i>tokens</i>:<br /> '
       definitions.tokens.forEach(token => {
-        tokens += '<code>' + (token.title) + '</code> '
+        tokens += formatToken(token, flowId)
       })
       $(newCard).find('[data=card_droptoken]').html(tokens)
     }
-    // if (type === 'trigger') $(newCard).find('[data=move_card_btn], [data=test_card_btn]').remove()
+    if (type === 'trigger') $(newCard).find('[data=move_card_btn], [data=test_card_btn]').remove()
     $(newCard).find('[data=test_card_btn]').attr('onClick', `testCard('${flowId}','${type}',${index})`)
     return newCard
   }
@@ -346,18 +410,37 @@
     return result
   }
 
-  function formatArgs (card, definitions) {
+  function formatArgs (card, definitions, flowId) {
     var output = ''
     Object.keys(card.args).forEach(function (argument) {
       if (Object.prototype.toString.call(definitions.args) === '[object Object]') definitions.args = [definitions.args]
-      output += '<i>' + argument + '</i>: ' + formatArgValue(definitions.args.filter(item => item.name === argument)[0], card.args[argument]) + '<br>'
+      output += '<i>' + argument + '</i>: ' + formatArgValue(definitions.args ? definitions.args.filter(item => item.name === argument)[0] : undefined, card.args[argument]) + '<br>'
     })
-    output = output.replace(/\[\[/g, '<code>').replace(/]\]/g, '</code>')
+    output = output.replace(/(?:\[\[)(.*?)(?:\]\])/g, function (tag) {
+      tag = tag.replace(/\[|\]/g, '')
+      var token = {title: tag}
+      return formatToken(token, flowId)
+    })
     return output
   }
 
+  function formatToken (token, flowId) {
+    // find local token in flow
+    if (token.title.indexOf('|') > 0) {
+      let uri = token.title.split('|')[0]
+      let id = token.title.split('|')[1]
+      token = tokens.filter(x => (x.uri === uri && (x.id === id || x.title === id)))[0] || token
+    } else if (!token.type) {
+      token.type = 'string'
+      let localTriggerCard = getCard(getFlow(flowId).trigger.uri, 'trigger', getFlow(flowId).trigger.id)
+      if (localTriggerCard) token = localTriggerCard.tokens.filter(x => x.id === token.title)[0] || token
+    }
+    var tooltipexample = token.example ? `, example: ${token.example}` : ''
+    return `<span class="label label-info label-${token.type}" data-toggle="tooltip" title="${token.type}${tooltipexample}">${token.title}</span> `
+  }
+
   function formatArgValue (argDef, value) {
-    if (argDef === undefined) argDef = {type: 'text'}  //todo: v2 workaround
+    if (argDef === undefined && typeof value === 'object') argDef = {type: 'object'}  //todo: v2 workaround
     switch (argDef.type) {
       case 'autocomplete':
         return value.name
@@ -367,6 +450,8 @@
         return `<span class="colorbox" style="background-color: ${value}"> </span> (${value})`
       case 'range':
         return value * (argDef.labelMultiplier || 1) + (argDef.title || '')
+      case 'object':
+        return value.name || JSON.stringify(value)
       case 'text':
       case 'number':
       case 'time':
@@ -491,7 +576,8 @@
     folders.sort((a, b) => (a.sorting > b.sorting ? 1 : -1))
   }
 
-  function showFlows (callback) {
+  function showFlows () {
+    console.log('Show flows')
     flows.forEach(flow => {
       flow.order = formatOrderNumber(flow.order)
       if (flow.folder) flow.order = folderOrder(flow.folder) + flow.order
@@ -500,44 +586,18 @@
     flows.forEach(flow => {
       addFlow(flow)
     })
-    callback()
   }
 
-  function showTokens (callback) {
+  function showTokens () {
+    console.log('Show tokens')
     tokens.forEach(token => {
       addToken(token)
     })
-    callback()
   }
 
-  $.getScript(`${setup.protocol}://${setup.ip}/socket.io/socket.io.js`, () => {
-    console.log('Load devices')
-    loadDevices(() => {
-      console.log('Load folders')
-      loadFolders(() => {
-        console.log('Load cards')
-        loadCards(() => {
-          console.log('Load flows')
-          loadFlows(() => {
-            console.log('Show flows')
-            showFlows(() => {
-              console.log('Load tokens')
-              loadTokens(() => {
-                console.log('Show tokens')
-                showTokens(() => {
-                  connectFlowManager(() => {
-                    setTimeout(ready, 1000)
-                  })
-                })
-              })
-            })
-          })
-        })
-      })
-    })
-  })
-  function ready() {
-    $('#flow_count').html(flows.length)
+  function showFolders () {
+    console.log('Show folders')
+    $('#folders').treeview('remove')
     $('#folders').treeview({
       data: getTree(),
       expandIcon: 'glyphicon glyphicon-chevron-right',
@@ -555,6 +615,33 @@
         setTimeout(setFoldersDroppable, 500)
       }
     })
+  }
+
+  $.getScript(`${setup.protocol}://${setup.ip}/socket.io/socket.io.js`, () => {
+    console.log('Load devices')
+    loadDevices(() => {
+      console.log('Load folders')
+      loadFolders(() => {
+        console.log('Load cards')
+        loadCards(() => {
+          console.log('Load flows')
+          loadFlows(() => {
+            console.log('Load tokens')
+            loadTokens(() => {
+              showFlows()
+              showTokens()
+              showFolders()
+              connectFlowManager(() => {
+                setTimeout(ready, 500)
+              })
+            })
+          })
+        })
+      })
+    })
+  })
+  function ready() {
+    $('#flow_count').html(flows.length)
     $("#wrapper").toggleClass("toggled")
     setTooltips()
     setFlowsDraggable()
@@ -598,6 +685,19 @@
         type: 'DELETE',
         success: function(data) {
           $(`[data-flow-id=${flowId}]`).slideUp(1000)
+        }
+      })
+    })
+  }
+
+  function deleteFlowFolder (folderId) {
+    deleteFolderDialog(folderId, function(doDelete) {
+      if (!doDelete) return
+      $.ajax({
+        url: `${setup.protocol}://${setup.ip}/api/manager/flow/flowfolder/${folderId}`,
+        type: 'DELETE',
+        success: function(data) {
+          location.reload()
         }
       })
     })
@@ -712,6 +812,28 @@
     })
   }
 
+  function deleteFolderDialog (folderId, callback) {
+    BootstrapDialog.show({
+      title: 'Delete folder',
+      message: 'Are you sure you want to delete folder ' + getFolder(folderId).name + '?',
+      buttons: [
+        {
+          label: 'Cancel',
+          action: function (dialogRef) {
+            dialogRef.close()
+            callback(false)
+          }
+        },{
+          label: 'Delete',
+          action: function (dialogRef) {
+            dialogRef.close()
+            callback(true)
+          }
+        }
+      ]
+    })
+  }
+
   function editFlowDialog (flowId, callback) {
     var message = $('.dialog_edit').clone()
     $(message).find('[id=editName]').attr('value', `${getFlow(flowId).name}`)
@@ -759,6 +881,138 @@
           label: 'Close',
           action: function (dialogRef) {
             dialogRef.close()
+          }
+        }
+      ]
+    })
+  }
+
+  function addFolder () {
+    addFolderDialog(function (newName, parent) {
+      var newFolderInfo = {name: newName.trim()}
+      if (newFolderInfo.name.length === 0) return
+      if (parent !== "false") newFolderInfo.parent = parent
+      $.ajax({
+        url: `${setup.protocol}://${setup.ip}/api/manager/flow/flowfolder`,
+        type: 'POST',
+        data: JSON.stringify(newFolderInfo),
+        success: function(data) {
+          loadFolders(showFolders)
+        }
+      })
+    })
+  }
+
+  function editFolder () {
+    selectFolderDialog(function (folderId) {
+      if (!folderId) return
+      editFolderDialog(folderId, function (newName, parent) {
+        newFolderInfo = {
+          name: newName.trim(),
+          parent: parent === "false" ? null : parent
+        }
+        if (newFolderInfo.name.length === 0) return
+        $.ajax({
+          url: `${setup.protocol}://${setup.ip}/api/manager/flow/flowfolder/${folderId}`,
+          type: 'PUT',
+          data: JSON.stringify(newFolderInfo),
+          success: function (data) {
+            loadFolders(showFolders)
+          }
+        })
+      })
+    })
+  }
+
+  function addFolderDialog ( callback ) {
+    var message = $('.dialog_addFolder').clone()
+
+    buildFolderListSelector(message, 'editFolder')
+
+    BootstrapDialog.show({
+      title: 'Add folder',
+      message: message,
+      buttons: [
+        {
+          label: 'Cancel',
+          action: function (dialogRef) {
+            dialogRef.close()
+            callback(false)
+          }
+        },{
+          label: 'Save',
+          action: function (dialogRef) {
+            var folderName = dialogRef.getModalBody().find('[id=addFolder]').val()
+            var editFolder = dialogRef.getModalBody().find('[id=editFolder]').val()
+            dialogRef.close()
+            callback(folderName, editFolder)
+          }
+        }
+      ]
+    })
+  }
+
+  function selectFolderDialog ( callback ) {
+    var message = $('.dialog_selectFolder').clone()
+    buildFolderListSelector(message, 'editFolder')
+    BootstrapDialog.show({
+      title: 'Select folder to edit',
+      message: message,
+      buttons: [
+        {
+          label: 'Cancel',
+          action: function (dialogRef) {
+            dialogRef.close()
+            callback(false)
+          }
+        },{
+          label: 'Next',
+          action: function (dialogRef) {
+            var editFolder = dialogRef.getModalBody().find('[id=editFolder]').val()
+            dialogRef.close()
+            callback(editFolder)
+          }
+        }
+      ]
+    })
+  }
+
+  function buildFolderListSelector(message, element, excludeId) {
+    function loopNodes(folders) {
+      folders.forEach(folder => addFolder(folder))
+    }
+
+    function addFolder(folder) {
+      $(message).find(`[id=${element}]`).append($('<option></option>').attr('value', folder.id).text(formatFolder(folder.id)))
+      if (folder.nodes) loopNodes(folder.nodes)
+    }
+
+    loopNodes(getTree(excludeId))
+  }
+
+  function editFolderDialog ( folderId, callback ) {
+    var message = $('.dialog_editFolder').clone()
+    $(message).find('[id=editName]').attr('value', `${getFolder(folderId).name}`)
+    buildFolderListSelector(message, 'editFolder', folderId)
+
+    $(message).find('[id=editFolder]').val((getFolder(folderId).parent || false).toString())
+    BootstrapDialog.show({
+      title: 'Change the folder name or choose another parent folder',
+      message: message,
+      buttons: [
+        {
+          label: 'Cancel',
+          action: function (dialogRef) {
+            dialogRef.close()
+            callback(false)
+          }
+        },{
+          label: 'Save',
+          action: function (dialogRef) {
+            var folderName = dialogRef.getModalBody().find('[id=editName]').val()
+            var editFolder = dialogRef.getModalBody().find('[id=editFolder]').val()
+            dialogRef.close()
+            callback(folderName, editFolder)
           }
         }
       ]
@@ -932,15 +1186,16 @@
     if (flow.flow.conditions.length + flow.flow.actions.length > 0) test(flowId, flow, null)
   }
 
-  function getTree() {
+  function getTree(excludeid) {
     function treeBuild (parent) {
       var tree = []
+      if (parent && parent === excludeid) return tree
       for (var folderIndex in folders) {
         var folder = folders[folderIndex]
-        if (folder.parent == parent) {
+        if (folder.parent === parent && folder.id !== excludeid) {
           var node = {text: folder.name, nodes: treeBuild(folder.id), order: folder.sorting, id: folder.id}
           if (node.nodes.length === 0) delete node.nodes
-          var flowCount = flows.filter(flow => flow.parent === folder.id).length
+          var flowCount = flows.filter(flow => flow.folder === folder.id).length
           if (flowCount > 0) node.tags = [flowCount]
           tree.push(node)
         }
@@ -1024,7 +1279,7 @@
 
     var HomeySocket
     function connectFlowManager (callback) {
-      console.log('Connecting to Homey realtime flow manager...')
+      console.log('Connecting to Homey realtime manager...')
       var socket = io.connect(`${setup.protocol}://${setup.ip}`, {transports: ['websocket', 'polling']})
       socket.on('connect', function () {
         socket.emit("handshakeClient", {

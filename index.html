@@ -10,23 +10,26 @@
 </head>
 <body>
   <div class=container-fluid>
-    <h2>Realtime Homey logger</h2>
+    <h2>Realtime Homey logger V2 (in progress)</h2>
     <p>Fired socket.io events on <code>realtime/app/app-id</code>, <code>realtime/manager/devices</code>, <code>realtime/device/device-id</code>, <code>realtime/manager/flow</code> etc, etc are shown here as they occur.</p>
     <div class="panel panel-default">
       <div class="panel-body small">Enable or disable:&nbsp;
-        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="appsManager" checked>app manager</label>
+        <!-- <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="appsManager" checked>app manager</label> -->
         <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="apps" checked>apps</label>
-        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="deviceManager" checked>device manager</label>
+        <!-- <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="deviceManager" checked>device manager</label> -->
         <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="devices" checked>devices</label>
-        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="flow" checked>flow testing</label>
-        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="geolocation" checked>geolocation</label>
-        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="insights" checked>insights</label>
-        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="ledring" checked>ledring</label>
-        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="notifications" checked>notifications</label>
-        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="presence" checked>presence</label>
-        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="speechInput" checked>speech-input</label>
-        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="speechOutput" checked>speech-output</label>
+        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="devkit" checked>devkit</label>
+        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="flow" checked>flow</label>
+        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="logic" checked>logic</label>
+        <!-- <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="geolocation" checked>geolocation</label> -->
+        <!-- <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="insights" checked>insights</label> -->
+        <!-- <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="ledring" checked>ledring</label> -->
+        <!-- <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="notifications" checked>notifications</label> -->
+        <!-- <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="presence" checked>presence</label> -->
+        <!-- <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="speechInput" checked>speech-input</label> -->
+        <!-- <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="speechOutput" checked>speech-output</label> -->
         <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="zwave" checked>zwave</label>
+        <label class="checkbox-inline"><input type="checkbox" onChange="optionsChanged()" id="zigbee" checked>zigbee</label>
       </div>
     </div>
     <table id="logs" class="table table-condensed" width=100%>
@@ -45,13 +48,18 @@
     </table>
   </div>
   <script>
-  var devices = []
-  var apps = []
+  var devices = {}
+  var apps = {}
   var setting = {}
 
-  if (setup.ip === '0.0.0.0') alert('Configure your Homey IP in config.js...')
-  if (setup.bearer_token === 'your token') alert('Configure your Bearer token in config.js...')
-  $.ajaxSetup({headers: {Authorization: 'Bearer ' + setup.bearer_token}})
+  if (setup.ip === '0.0.0.0') alert('Configure your Homey IP in the config.js file...')
+  if (setup.bearer_token === 'your token') alert('Configure your Bearer token in the config.js file...')
+  if (setup.homeyId === 'your Homey ID') alert('Configure your Homey ID in the config.js file...')
+
+  $.ajaxSetup({
+    contentType : 'application/json',
+    headers: {Authorization: 'Bearer ' + setup.bearer_token}
+  })
 
   function optionsChanged () {
     setting = {
@@ -59,15 +67,18 @@
       apps: $('#apps').prop('checked'),
       deviceManager: $('#deviceManager').prop('checked'),
       devices: $('#devices').prop('checked'),
+      devkit: $('#devkit').prop('checked'),
       flow: $('#flow').prop('checked'),
       geolocation: $('#geolocation').prop('checked'),
       insights: $('#insights').prop('checked'),
       ledring: $('#ledring').prop('checked'),
+      logic: $('#logic').prop('checked'),
       notifications: $('#notifications').prop('checked'),
       presence: $('#presence').prop('checked'),
       speechInput: $('#speechInput').prop('checked'),
       speechOutput: $('#speechOutput').prop('checked'),
-      zwave: $('#zwave').prop('checked')
+      zwave: $('#zwave').prop('checked'),
+      zigbee: $('#zigbee').prop('checked')
     }
 
     $.each(setting, function (category) {
@@ -89,7 +100,7 @@
     if (optionalStyle) html += ' ' + optionalStyle
     html += '"><td class="datetime small text-nowrap">' + new Date().toISOString() + '</td>'
     html += '<td class="event small">' + event.capitalizeFirstLetter() + '</td>'
-    html += '<td class="data small text-muted">' + (!data ? '' : JSON.stringify(data)) + '</td></tr>'
+    html += '<td class="data small text-muted">' + (typeof data === 'string' ? data : JSON.stringify(data)) + '</td></tr>'
     $('table#logs tbody tr:first').before(html)
     $('#logs').find('tr:gt(1000)').remove()
     if (setting[category]) {
@@ -123,103 +134,98 @@
   }
 
   function listenDevices () {
-    // get all devices and handels all events on /realtime/device/device_id/
     $.getJSON(setup.protocol + '://' + setup.ip + '/api/manager/devices/device/', function(data) {
-      addLogEntry('Start device listener', 'Will listen to realtime events of ' + Object.keys(data.result).length + ' devices', 'devices')
-      $.each(data.result, function (index, resultDevice) {
-        var device = {
-          id: resultDevice.id,
-          name: resultDevice.name
-        }
-        devices.push(device)
-        var deviceSocket = io.connect(setup.protocol + '://' + setup.ip + '/realtime/device/' + device.id + '/', {query: 'token=' + setup.bearer_token, transports: ['websocket', 'polling']})
-        console.log(setup.protocol + '://' + setup.ip + '/realtime/device/' + device.id + '/')
-        var _onevent = deviceSocket.onevent
-        deviceSocket.onevent = function (packet) { //Override incoming socket events
-          console.log(packet)
-          var args = packet.data || []
-          addLogEntry(device.name, args, 'devices')
-          _onevent.call(deviceSocket, packet)
-        }
+      addLogEntry('Start device listener', 'Will listen to realtime events of ' + Object.keys(data).length + ' devices', 'devices')
+      $.each(data, function (index, resultDevice) {
+        devices[resultDevice.id] = resultDevice.name
+        HomeySocket.emit('subscribe', 'homey:device:' + resultDevice.id)
       })
     })
   }
 
   function listenApps () {
-    // get all apps and handels all events on /realtime/app/app_id/
     $.getJSON(setup.protocol + '://' + setup.ip + '/api/manager/apps/app', function(data) {
-      addLogEntry('Start app listener', 'Will listen to realtime events of ' + Object.keys(data.result).length + ' apps', 'apps')
-      $.each(data.result, function (index, resultApp) {
-        var app = {
-          id: resultApp.id,
-          name: resultApp.name.en
-        }
-        apps.push(app)
-        var appSocket = io.connect(setup.protocol + '://' + setup.ip + '/realtime/app/' + app.id + '/', {query: 'token=' + setup.bearer_token, transports: ['websocket', 'polling']})
-        var _onevent = appSocket.onevent
-        appSocket.onevent = function (packet) { //Override incoming socket events
-          var args = packet.data || []
-          console.log('*** realtime/app', 'onevent', args, packet, app)
-          addLogEntry(app.name, args, 'apps')
-          _onevent.call(appSocket, packet)
-        }
+      addLogEntry('Start app listener', 'Will listen to realtime events of ' + Object.keys(data).length + ' apps', 'apps')
+      $.each(data, function (index, resultApp) {
+        apps[resultApp.id] = resultApp.name
+        HomeySocket.emit('subscribe', 'homey:app:' + resultApp.id)
       })
     })
   }
 
-  function listenOn (namespace, category) {
-    var socket = io.connect(setup.protocol + '://' + setup.ip + namespace, {query: 'token=' + setup.bearer_token, transports: ['websocket', 'polling']})
-    socket.onevent = function (packet) { //Override incoming socket events
-      var args = packet.data || []
-      console.log('***', namespace, packet.data[0], packet.data[1], packet)
-      addLogEntry(category + ': ' + packet.data[0], packet.data[1], category)
-      // if (category === 'appsManager' && packet.data[0] === 'ready') {
-        // addLogEntry('Start app listener for app', packet.data[1], 'apps')
-      // }
-    }
-  }
+  var HomeySocket
+  function connectRealtimeApi (callback) {
+    console.log('Connecting to Homey realtime manager...')
+    var socket = io.connect(`${setup.protocol}://${setup.ip}`, {transports: ['websocket', 'polling']})
+    socket.on('connect', function () {
+      socket.emit("handshakeClient", {
+        homeyId: setup.homeyId,
+        token: setup.bearer_token
+      }, function (error, n) {
+        if (error) return console.error('Main socket connection error', error)
+        HomeySocket = socket.io.socket(n.namespace)
+        HomeySocket.onevent = function (packet) { //Override incoming socket events
+          var args = packet.data || []
+          var category = packet.data[0].split(':')[2]
+          var eventtitle = packet.data[0].split(':')[2] + ': ' + packet.data[1]
+          var data = packet.data[2]
 
-  var newSocket
-  function findSocket (namespace) {
-    // try this to validate new namespaces
-    newSocket = io.connect(setup.protocol + '://' + setup.ip + namespace , {query: 'token=' + setup.bearer_token, transports: ['websocket', 'polling']})
-    var _onevent = newSocket.onevent
-    var _emit = newSocket.emit
-    newSocket.onevent = function (packet) { //Override incoming socket events
-      var args = packet.data || []
-      console.log('***', 'event', args, packet)
-      _onevent.call(newSocket, packet)
-      alert('event on findSocket ' + namespace + '!')
-    }
-    newSocket.emit = function () { //Override outgoing
-      console.log('***', 'emit', arguments)
-      _emit.apply(newSocket, arguments)
-    }
+          // console.log('***', packet.data[0], packet.data[1], packet)
+          if (packet.data[2].chunk) {
+            data = String.fromCharCode.apply(null, new Uint8Array(packet.data[2].chunk))
+          }
+          if (apps[packet.data[0].split(':')[2]]) {
+            category = 'apps'
+            eventtitle = apps[packet.data[0].split(':')[2]] + ': ' + packet.data[1]
+          } else if (devices[packet.data[0].split(':')[2]]) {
+            category = 'devices'
+            eventtitle = devices[packet.data[0].split(':')[2]] + ': ' + packet.data[1]
+          }
+
+          addLogEntry(eventtitle, data, category)
+        }
+
+        HomeySocket.once("connect", function () {
+          socket.close()
+          console.log('subscribe to homey:manager:apps')
+          HomeySocket.emit("subscribe", "homey:manager:apps")
+          console.log('subscribe to homey:manager:devices')
+          HomeySocket.emit("subscribe", "homey:manager:devices")
+          console.log('subscribe to homey:manager:devkit')
+          HomeySocket.emit("subscribe", "homey:manager:devkit")
+          console.log('subscribe to homey:manager:flow')
+          HomeySocket.emit("subscribe", "homey:manager:flow")
+          console.log('subscribe to homey:manager:logic')
+          HomeySocket.emit("subscribe", "homey:manager:logic")
+          console.log('subscribe to homey:manager:zigbee')
+          HomeySocket.emit("subscribe", "homey:manager:zigbee")
+          console.log('subscribe to homey:manager:zwave')
+          HomeySocket.emit("subscribe", "homey:manager:zwave")
+          console.log('subscribing apps')
+          listenApps()
+          console.log('subscribing devices')
+          listenDevices()
+        })
+        HomeySocket.once("disconnect", function (error) {
+          console.log("HomeySocket disconnected", error)
+        })
+        HomeySocket.once("error", function (error) {
+          console.error("HomeySocket error", error)
+        })
+        HomeySocket.open()
+      })
+    })
+    socket.on('error',function (error) {
+      console.log(socket)
+    })
   }
 
   function listenToAll () {
     optionsChanged()
-    listenOn('/realtime/manager/apps/', 'appsManager')
-    listenApps()
-    listenDevices()
-    listenManagerDevices()
-    listenOn('/realtime/manager/flow/', 'flow')
-    listenOn('/realtime/manager/geolocation/', 'geolocation')
-    listenOn('/realtime/manager/insights/', 'insights')
-    listenOn('/realtime/manager/ledring/', 'ledring')
-    listenOn('/realtime/manager/speech-output/', 'speechOutput')
-    listenOn('/realtime/manager/speech-input/', 'speechInput')
-    listenOn('/realtime/manager/zwave/', 'zwave')
-    listenOn('/realtime/manager/notifications/', 'notifications')
-    listenOn('/realtime/manager/presence/', 'presence')
+    connectRealtimeApi()
+    // listenManagerDevices()
   }
 
-  // findSocket('/') // working, but no events
-  // findSocket('/realtime/manager/devkit/') // ignored
-  // findSocket('/realtime/manager/settings/') // nothing here
-  // findSocket('/realtime/manager/speaker/') // nothing here
-  // findSocket('/realtime/manager/system/') // nothing here
-  // findSocket('/realtime/manager/drivers/') // nothing here
   var socketlib = setup.protocol + '://' + setup.ip + '/socket.io/socket.io.js'
   $.getScript(socketlib, function () {
     listenToAll()
